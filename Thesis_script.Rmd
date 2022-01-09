@@ -1,19 +1,163 @@
 ---
-title: "R Notebook"
+title: "Thesis Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
-```{r}
-plot(cars)
+libraries
+  load once per session
+```{ message=FALSE}
+#loading the necesary packages for this code
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(stringr)
+library(skimr)
+library(splitstackshape)
+library(janitor)
+library(jcolors)
+library(wordcloud)
+library(wordcloud2)
+library(tm)
+library(data.table)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+loading
+  load once per session
+```{}
+#loading the csv files and then joining them in to one data base
+  ##converting blanks in to NA
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+#american journal of psychology
+ajp_01 <- read.csv("ajp_01.csv", na.strings = c("", "NA"))
+ajp_02 <- read.csv("ajp_02.csv", na.strings = c("", "NA"))
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+#psychological bulletin
+pb_01 <- read.csv("pb_01.csv", na.strings = c("", "NA"))
+pb_02 <- read.csv("pb_02.csv", na.strings = c("", "NA"))
+pb_03 <- read.csv("pb_03.csv", na.strings = c("", "NA"))
+pb_04 <- read.csv("pb_04.csv", na.strings = c("", "NA"))
+
+#perspectives on psychological science
+pps_01 <- read.csv("pps_01.csv", na.strings = c("", "NA"))
+
+#psychological review
+pr_01 <- read.csv("pr_01.csv", na.strings = c("", "NA"))
+pr_02 <- read.csv("pr_02.csv", na.strings = c("", "NA"))
+pr_03 <- read.csv("pr_03.csv", na.strings = c("", "NA"))
+
+#loading the packages all together
+data.loaded <- rbind(ajp_01, ajp_02,
+                       pb_01, pb_02, pb_03, pb_04,
+                       pps_01,
+                       pr_01, pr_02, pr_03)
+
+#creating a .csv file from table with all of the databases bound together to keep environment clean through the project
+write_csv(data.loaded, "data.loaded.csv")
+```
+
+cleaning
+  load once per session
+```{}
+#loading the csv file with all the databases in to a data frame
+data.original <- read.csv("data.loaded.csv")
+
+#cleaning the csv file for better usage in this project
+
+#discarding the columns that won't be used for the project
+data.original <- data.original %>%
+ select(-Art..No., -Molecular.Sequence.Numbers, -Chemicals.CAS,-Tradenames, -Manufacturers, -Funding.Text.1, -Funding.Text.2, -Funding.Text.3, -Funding.Text.4, -Funding.Text.5, -Funding.Text.6, -Funding.Text.7, -Funding.Text.8, -Funding.Text.9, -Funding.Text.10, -Correspondence.Address,  -Abbreviated.Source.Title)
+
+#reaming the columns for a better workflow
+names(data.original) <- c("authors", "author.id", "title", "year", "source.title", "volume", "issue", "page.start", "page.end", "page.count", "cited.by", "doi", "link", "affiliations", "author.w.affiliations", "abstract", "author.keywords", "index.keywords", "funding.details", "references", "editors", "sponsors", "publisher", "conference.name", "conference.date", "conference.location", "conference.code", "issn", "isbn", "coden", "pubmed.id", "original.language", "document.type", "publication.stage", "open.access", "source", "eid")
+
+#discarding any repeated rows (ie: documents) that might have shown up
+data <- unique(data.original)
+
+#checking which columns use "[No x available]" format to replace that message with "NA" instead for better workflow later
+  ##those columns that use it have exact language listed in comments next to it
+data %>% filter(grepl("available]", authors)) #[No author name available]
+data %>% filter(grepl("available]", author.id)) #[No author id available]
+data %>% filter(grepl("available]", title))
+data %>% filter(grepl("available]", year))
+data %>% filter(grepl("available]", source.title))
+data %>% filter(grepl("available]", volume))
+data %>% filter(grepl("available]", issue))
+data %>% filter(grepl("available]", page.start))
+data %>% filter(grepl("available]", page.end))
+data %>% filter(grepl("available]", page.count))
+data %>% filter(grepl("available]", cited.by))
+data %>% filter(grepl("available]", doi))
+data %>% filter(grepl("available]", link))
+data %>% filter(grepl("available]", affiliations))
+data %>% filter(grepl("available]", author.w.affiliations))
+data %>% filter(grepl("available]", abstract)) #[No abstract available]
+data %>% filter(grepl("available]", author.keywords))
+data %>% filter(grepl("available]", index.keywords))
+data %>% filter(grepl("available]", funding.details))
+data %>% filter(grepl("available]", references))
+data %>% filter(grepl("available]", editors))
+data %>% filter(grepl("available]", sponsors))
+data %>% filter(grepl("available]", publisher))
+data %>% filter(grepl("available]", conference.name))
+data %>% filter(grepl("available]", conference.date))
+data %>% filter(grepl("available]", conference.location))
+data %>% filter(grepl("available]", conference.code))
+data %>% filter(grepl("available]", issn))
+data %>% filter(grepl("available]", isbn))
+data %>% filter(grepl("available]", coden))
+data %>% filter(grepl("available]", pubmed.id))
+data %>% filter(grepl("available]", original.language))
+data %>% filter(grepl("available]", document.type))
+data %>% filter(grepl("available]", publication.stage))
+data %>% filter(grepl("available]", open.access))
+data %>% filter(grepl("available]", source))
+data %>% filter(grepl("available]", eid))
+
+#replacing text about missing data for NA instead in the columns that use text to indicate missing information
+data <- data %>%
+  mutate(authors = na_if(authors, "[No author name available]")) %>%
+  mutate(author.id = na_if(author.id, "[No author id available]")) %>%
+  mutate(abstract = na_if(abstract, "[No abstract available]"))
+
+##checking if any columns are totally empty
+  ##totally empty: sponsors, conference.date, conference.location, conference.code, page.count
+  ##almost totally empty: isbn (1 not empty), editors (1 not empty), conference.name (1 not empty)
+colSums(is.na(data))
+
+#discarding columns that are totally empty or that are empty except for one row, as they will not provide useful information in the aggregate
+  #adding an article ID to each column
+
+data <- data %>%
+ select(-sponsors, -conference.name, -conference.date, -conference.location, -conference.code, -isbn, -page.count) %>%
+  mutate(id = row_number())
+```
+
+```{r}
+data
+```
+
+DESCRIPTIVE INFORMATION ABOUT ALL OF THE JOURNAL DATA BASES HERE + ABOUT EACH ONE INDIVIDUALLY
+
+```{r}
+data.title <- data %>%
+  filter(grepl("ecological validity|ecologically valid", title, ignore.case = TRUE))
+
+data.abstract <- data %>%
+  filter(grepl("ecological validity|ecologically valid", abstract, ignore.case = TRUE))
+
+data.author.keywords <- data %>%
+  filter(grepl("Necological validity|ecologically valid", author.keywords, ignore.case = TRUE))
+
+data.index.keywords <- data %>%
+  filter(grepl("ecological validity|ecologically valid", index.keywords, ignore.case = TRUE))
+
+#BINDING WITH THE EXTRA COLUMNS
+#putting all of the categories back together 
+data.ev <- do.call("rbind", list(data.title, data.abstract, data.author.keywords, data.index.keywords))
+
+#deleting any articles that might have replicated
+data.ev <- data.ev %>%
+  distinct(id, .keep_all = TRUE)
+```
 
