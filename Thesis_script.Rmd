@@ -76,10 +76,20 @@ library(wordcloud)
 library(wordcloud2)
 library(tm)
 library(data.table)
+library(utils)
+
+#quanteda packages
+library(Rcpp) #rcpp has to load before quanteda
+library(quanteda)
+library(readtext)
+library(devtools)
+library(quanteda.textmodels)
+library(spacyr)
+library(newsmap)
 ```
 
 
-```{r}
+```{}
 #loading the csv files and then joining them in to one data base
   ##converting blanks in to NA
 
@@ -175,8 +185,8 @@ data <- data %>%
   mutate(id = row_number())
 ```
 
-obtaining information about what journals are in the database, what years are in the database, and 
-```{r}
+```{r} 
+#STARTED GETTING AN ERROR HERE ONCE I SPLIT THE DATA, SO I MOVED IT UP
 #obtaining the articles that are represented in the database
   #total of 719 journals represented
 journals <- unique(data[c("source.title")])
@@ -196,11 +206,23 @@ write_csv(journal.first.instance, "journals_by_year.csv")
 ```
 
 ```{r}
-#creating an aesthetic for the visualizations
+#giving each author.id, author name, affilication, index.keywords, references, and author.keywords a separate column for each piece of distinct data
+data <- cSplit(data, "author.id", sep=";")
+
+data <-  cSplit(data, "authors", sep=",")
+  
+data <-  cSplit(data, "affiliations", sep=";")
+
+data <- cSplit(data, "index.keywords", sep=";")
+  
+data <- cSplit(data, "references", sep=";")
+
+data <- cSplit(data, "author.keywords", sep=";")
 ```
 
 
 ```{r}
+#creating an aesthetic for the visualizations
 theme_thesis <- theme_classic()
 ```
 
@@ -276,7 +298,7 @@ ggplot(data.abstract.both, aes(x=document.type, fill=has.abstract)) +
 ```
 
 ```{r}
-#bar graph of whether the items have abstracts or not
+#pie graph of whether the items have abstracts or not
 data.abstract.both <- data.abstract.both %>%
   count(has.abstract) %>%
   mutate(per = (100*n)/2650)
@@ -295,7 +317,33 @@ ggplot(data.abstract.both, aes(x="", y = per, fill = has.abstract)) +
 
 ```
 
+```{r}
+#trying to 
+```
 
+
+```{r}
+#word cloud for most common keywords in the articles
+
+#making a long list of all the keywords used in articles about neural networks
+  #there 90 keyword columns
+index.keywords <- data %>%
+  select(index.keywords_01:index.keywords_90, id)
+
+index.keywords = melt(index.keywords, id.vars=c("id"), na.rm = TRUE)
+
+#making everything lowercase
+index.keywords$value = tolower(index.keywords$value)
+
+index.keywords <- index.keywords %>%
+  select(-id, -variable) %>%
+  drop_na(value) %>%
+  count(value)
+
+wordcloud(words = index.keywords$value, freq = index.keywords$n, min.freq = 5,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"), scale=c(2.0,0.25))
+```
 
 
 
