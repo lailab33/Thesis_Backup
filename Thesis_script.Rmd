@@ -77,6 +77,7 @@ library(wordcloud2)
 library(tm)
 library(data.table)
 library(utils)
+library(reshape2)
 
 #quanteda packages
 library(Rcpp) #rcpp has to load before quanteda
@@ -84,6 +85,7 @@ library(quanteda)
 library(readtext)
 library(devtools)
 library(quanteda.textmodels)
+
 library(spacyr)
 library(newsmap)
 ```
@@ -318,49 +320,149 @@ ggplot(data.abstract.both, aes(x="", y = per, fill = has.abstract)) +
 ```
 
 ```{r}
-#trying to 
-```
-
-
-```{r}
-#word cloud for most common keywords in the articles
-
-#making a long list of all the keywords used in articles about neural networks
-  #there 90 keyword columns
+#trying to use quanteda to make wordclouds
 index.keywords <- data %>%
   select(index.keywords_01:index.keywords_90, id)
 
-index.keywords = melt(index.keywords, id.vars=c("id"), na.rm = TRUE)
+#collapsing the row of columns 01-90 in to one column
+index.keywords <-  melt(index.keywords, id.vars=c("id"), na.rm = TRUE) %>%
+  select(-variable)
 
 #making everything lowercase
 index.keywords$value = tolower(index.keywords$value)
 
-index.keywords <- index.keywords %>%
-  select(-id, -variable) %>%
-  drop_na(value) %>%
-  count(value)
+#taking away punctuation
+index.keywords$value <- gsub('[[:punct:] ]+',' ', as.character(index.keywords$value))
+```
 
-wordcloud(words = index.keywords$value, freq = index.keywords$n, min.freq = 5,
-          max.words=200, random.order=FALSE, rot.per=0.35,
-          colors=brewer.pal(8, "Dark2"), scale=c(2.0,0.25))
+
+```{r}
+#making a corpus of the abstracts of the documents
+data.abstract <- data
+
+#converting to lowercase and removing punctuation
+data.abstract$abstract <- gsub('[[:punct:] ]+',' ', as.character(data.abstract$abstract))
+data.abstract$abstract = tolower(data.abstract$abstract)
+  
+corp_abstract <- corpus(data, text_field = "abstract")
+
+#adding id number to the text information
+docnames(corp_abstract) <- data$id 
+print(corp_abstract)
+```
+
+
+```{r}
+#able to work with different subsets with the following code: 
+  ## can check different analysis by year
+corp_recent <- corpus_subset(corp, Year >= 1990)
+ndoc(corp_recent)
+
+##You can see how keywords are used in the actual contexts in a concordance view produced by kwic().
+  #https://tutorials.quanteda.io/basic-operations/tokens/kwic/
+kw_immig <- kwic(toks, pattern =  "immig*")
+head(kw_immig, 10)
+
+#You can remove tokens that you are not interested in using tokens_select(). Usually we remove function words (grammatical words) that have little or no substantive meaning in pre-processing. stopwords() returns a pre-defined list of function words.
+
+```
+
+
+```{}
+#information about number of articles indexed in scopus by year, sourced from the extra materials of:
+  #Thelwall, M. (2022) Scopus 1900-2020: Growth in articles, abstracts, countries, fields, and journals. Quantitative Science Studies. Advance Publication. https://doi.org/10.1162/qss_a_00177
+
+scopus.psych <- data.frame(year = c(1900,	1901,	1902,	1903,	1904,	1905,	1906,	1907,	1908,	1909,	1910,	1911,	1912,	1913,	1914,	1915,	1916,	1917,	1918,	1919,	1920,	1921,	1922,	1923,	1924,	1925,	1926,	1927,	1928,	1929,	1930,	1931,	1932,	1933,	1934,	1935,	1936,	1937,	1938,	1939,	1940,	1941,	1942,	1943,	1944,	1945,	1946,	1947,	1948,	1949,	1950,	1951,	1952,	1953,	1954,	1955,	1956,	1957,	1958,	1959,	1960,	1961,	1962,	1963,	1964,	1965,	1966,	1967,	1968,	1969,	1970,	1971,	1972,	1973,	1974,	1975,	1976,	1977,	1978,	1979,	1980,	1981,	1982,	1983,	1984,	1985,	1986,	1987,	1988,	1989,	1990,	1991,	1992,	1993,	1994,	1995,	1996,	1997,	1998,	1999,	2000,	2001,	2002,	2003,	2004,	2005,	2006,	2007,	2008,	2009,	2010,	2011,	2012,	2013,	2014,	2015,	2016,	2017,	2018,	2019,	2020),
+                           articles = c(44,	33,	44,	32,	69,	57,	53,	54,	93,	84,	81,	92,	100,	108,	119,	104,	108,	105,	84,	104,	95,	62,	109,	105,	96,	80,	138,	134,	151,	123,	149,	133,	142,	137,	138,	141,	161,	232,	218,	179,	186,	184,	145,	182,	171,	186,	171,	192,	219,	294,	368,	362,	407,	444,	422,	351,	340,	325,	369,	359,	304,	341,	417,	437,	537,	1054,	1079,	1289,	1436,	1163,	1470,	1526,	1478,	1855,	2025,	1942,	2101,	2139,	2411,	2346,	2490,	2659,	2806,	2804,	2711,	2799,	2748,	2789,	3009,	3007,	3347,	3352,	3551,	3490,	3540,	3815,	5051,	4957,	5260,	5189,	5363,	5521,	5245,	4746,	5531,	5331,	6832,	7873,	8213,	7032,	7448,	7778,	8246,	8949,	10238,	10324,	11584,	12028,	12092,	13691,	15634))
 ```
 
 
 
+```{r}
+#loading the csv file on number of articles about number of articles scopus has indexed for each year
+psych.articles.year <- read.csv("articles.by.year.csv", na.strings = c("", "NA"))
+
+```
+
+```{r}
+#making a graph of number of journals indexed by Scopus under the category of psychology
+  ggplot(psych.articles.year, aes(x = year, y = article.count)) +
+  geom_line() +  
+    scale_x_continuous(breaks = c(1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
+    labs(title= "Number of journals indexed by Scopus under the category of psychology", x = "Year", y = "Number of journals") +
+    theme_thesis
+
+```
 
 
 
+```{r}
+#loading information from Scopus representative about the number of articles per particular journal that are uploaded to scopus January-February 2022
+
+scopus_journal_counts <- read.csv("scopus_journal_counts.csv", na.strings = c("", "NA"))
+
+scopus_source_list <- read.csv("scopus_source_list.csv", na.strings = c("", "NA"))
+```
+
+
+```{r}
+#locating the most cited article
+data %>%
+  slice_max(cited.by, n = 1)
+  #one: doi: 10.1146/annurev.clinpsy.3.022806.091415
+
+#locating the earliest articles (published 1972)
+data %>%
+  filter(year == 1972)
+  #two: doi 10.1037/h0032569 & 10.1207/s15327906mbr0704_2
+
+```
 
 
 
+```{r}
+#first pass at selecting random articles to qualitatively code
+#randomly selecting 3 articles
+sample_n(data, 3)
+  #pass 1, article 1: Bimodal displays improve speech comprehension in environments with multiple speakers, 2003	Human Factors, 10.1518/hfes.45.2.329.27237
+    #id: 1379	
+  #pass 1, article 2: Looking for the "right" amount to eat at the restaurant: Social influence effects when ordering, 2011	Social Influence, 	10.1080/15534510.2011.632130
+    #id: 917	
+  #pass 1, article 3: Emotion recognition in temporal lobe epilepsy: A systematic review, 	2015	Neuroscience and Biobehavioral Reviews, 	10.1016/j.neubiorev.2015.05.009
+    #id: 403
 
+#selecting one article that is in the top 25% range of citations
+  #determining what the top 25% of citations is: 
+quantile(data$cited.by, na.rm=TRUE) #result, top 25% is more than 32 citations
 
+#filtering to make a data set of articles cited more than 32 times
+data.top.75per <- data %>%
+  filter(cited.by > 32)
 
+#selecting one random article in the top 25% citation range
+sample_n(data.top.75per,1)
+  #pass 1, article 4: Initial examination of the validity and reliability of the female photographic figure rating scale for body image assessment, 2008, 	Personality and Individual Differences	44	8	1752	1761	119	10.1016/j.paid.2008.02.002
 
+#making a data base of articles from 1972 to 1990 inclusive & randomly selecting one article
+data.72.90 <- data %>%
+  filter(year < 1991) %>%
+  sample_n(1)
+  #pass 1, article 5: Tidig stimulering av barn: Internationella stromningar, 1983 Nordisk Psykologi, 10.1080/00291463.1983.10636862 
+    #this article is in Swedish and I can't find an English translation, since I don't speak Swedish I filtered for another article to analyze in its stead
+  #pass 1.5: Interracial imitation at a summer camp, 1975, Journal of Personality and Social Psychology. 10.1037/0022-3514.32.6.1099
 
+#making a data base of articles from 1991 to 2005 inclusive & randomly selecting one article
+data.91.05 <- data %>%
+  filter(year < 2006 & year > 1990) %>%
+  sample_n(1)
+  #pass 1, article 6: Ecological validity of laboratory studies of videopoker gaming, 1991, Journal of Gambling Studies. 10.1007/BF01014526
 
-
-
+#making a database of articles from 2006 to 2021 inclusive & randomly selecting one article
+data.06.21 <- data %>%
+  filter(year > 2005) %>%
+  sample_n(1)
+  #pass 1, article 7: Predicting advertising effectiveness by facial expressions in response to amusing persuasive stimuli, 2014, Journal of Neuroscience, Psychology, and Economics. 10.1037/npe0000012
+```
 
 
 
