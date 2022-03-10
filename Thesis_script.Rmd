@@ -408,40 +408,121 @@ ggplot(data.abstract.both, aes(x="", y = per, fill = has.abstract)) +
 
 ```
 
-```{r}
-#trying to use quanteda to make wordclouds
-index.keywords <- data %>%
-  select(index.keywords_01:index.keywords_90, id)
+marimo list of stopwords: https://github.com/koheiw/marimo/blob/master/yaml/stopwords_en.yml
 
-#collapsing the row of columns 01-90 in to one column
-index.keywords <-  melt(index.keywords, id.vars=c("id"), na.rm = TRUE) %>%
+```{r}
+#title word cloud 
+
+#trying to use quanteda to make wordclouds
+data.title <- data %>%
+  select(title)
+
+#loading just the titles as part of the main corpus
+title.corpus <- corpus(data.title, text_field = "title")
+
+#removing punctuation from the title
+  #removing "stopwords" (common grammatical words in the english language, which are here; https://github.com/koheiw/marimo/blob/master/yaml/stopwords_en.yml )
+wc.title <- tokens(title.corpus, remove_punct = TRUE) %>%
+    tokens_remove(pattern = stopwords("en"))
+
+#creating a document-feature matrix (DFM) from the tokens object
+wc.title.dfm <- dfm(wc.title)
+
+#creating a word cloud of 100 words from the dfm
+  #setting the seed for reproducibility
+set.seed(132)
+quanteda.textplots::textplot_wordcloud(wc.title.dfm, max_words = 200)
+
+#dataframe of the most used words in the titles w/ number of times used
+title_freq <- quanteda.textstats::textstat_frequency(wc.title.dfm)
+
+```
+
+
+```{r}
+#abstract word cloud 
+
+#trying to use quanteda to make wordclouds
+data.abstract <- data %>%
+  select(abstract)
+
+#loading just the titles as part of the main corpus
+abstract.corpus <- corpus(data.abstract, text_field = "abstract")
+
+#removing punctuation from the title
+  #removing "stopwords" (common grammatical words in the english language, which are here; https://github.com/koheiw/marimo/blob/master/yaml/stopwords_en.yml )
+wc.abstract <- tokens(abstract.corpus, remove_punct = TRUE) %>%
+  tokens_remove(pattern = stopwords("en"))
+
+#creating a document-feature matrix (DFM) from the tokens object
+wc.abstract.dfm <- dfm(wc.abstract)
+
+#creating a word cloud of 100 words from the dfm
+  #setting the seed for reproducibility
+set.seed(132)
+quanteda.textplots::textplot_wordcloud(wc.abstract.dfm, max_words = 200)
+
+#creating a list of the most used words w/number of times used
+abstract_freq <- quanteda.textstats::textstat_frequency(wc.abstract.dfm)
+```
+
+```{r}
+#keyword word cloud: just by the word in the keywords
+
+#trying to use quanteda to make wordclouds
+data.all.keywords <- data %>%
+  select(index.keywords_01:index.keywords_90, author.keywords_01:author.keywords_19, id)
+
+data.all.keywords <-  melt(data.all.keywords, id.vars=c("id"), na.rm = TRUE) %>%
+  select(-variable)
+
+#loading just the titles as part of the main corpus
+keywords.corpus <- corpus(data.all.keywords, text_field = "value")
+
+#removing punctuation from the title
+  #removing "stopwords" (common grammatical words in the english language, which are here; https://github.com/koheiw/marimo/blob/master/yaml/stopwords_en.yml )
+wc.all.keywords <- tokens(keywords.corpus, remove_punct = TRUE) %>%
+  tokens_remove(pattern = stopwords("en"))
+
+#creating a document-feature matrix (DFM) from the tokens object
+wc.all.keywords.dfm <- dfm(wc.all.keywords)
+
+#creating a word cloud of 100 words from the dfm
+  #setting the seed for reproducibility
+set.seed(132)
+quanteda.textplots::textplot_wordcloud(wc.all.keywords.dfm, max_words = 200)
+
+#creating a list of the most used words w/number of times used
+all.keywords.dfm <- quanteda.textstats::textstat_frequency(wc.all.keywords.dfm)
+
+```
+
+```{r}
+#wordcloud of the dataframe 
+
+#making a dataframe listing all the keywords
+data.all.keywords.unit <- data %>%
+  select(index.keywords_01:index.keywords_90, author.keywords_01:author.keywords_19, id)
+
+data.all.keywords.unit <-  melt(data.all.keywords.unit, id.vars=c("id"), na.rm = TRUE) %>%
   select(-variable)
 
 #making everything lowercase
-index.keywords$value = tolower(index.keywords$value)
+data.all.keywords.unit$value = tolower(data.all.keywords.unit$value)
 
-#taking away punctuation
-index.keywords$value <- gsub('[[:punct:] ]+',' ', as.character(index.keywords$value))
+#selecting only the keywords
+data.all.keywords.unit <- data.all.keywords.unit %>%
+  select(-id) %>%
+  drop_na(value) %>%
+  count(value)
+
+#making the wordcloud
+wordcloud(words = data.all.keywords.unit$value, freq = data.all.keywords.unit$n,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"), scale=c(2.0,0.25))
 ```
 
-
-```{}
-#making a corpus of the abstracts of the documents
-data.abstract <- data
-
-#converting to lowercase and removing punctuation
-data.abstract$abstract <- gsub('[[:punct:] ]+',' ', as.character(data.abstract$abstract))
-data.abstract$abstract = tolower(data.abstract$abstract)
-  
-corp_abstract <- corpus(data, text_field = "abstract")
-
-#adding id number to the text information
-docnames(corp_abstract) <- data$id 
-print(corp_abstract)
-```
-
-
-```{}
+```{r}
 #able to work with different subsets with the following code: 
   ## can check different analysis by year
 corp_recent <- corpus_subset(corp, Year >= 1990)
