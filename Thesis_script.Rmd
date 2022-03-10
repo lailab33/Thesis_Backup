@@ -208,6 +208,95 @@ write_csv(journal.first.instance, "journals_by_year.csv")
 ```
 
 ```{r}
+#seeing where the keywords of ecological validity are found for each article
+
+  #SELF NOTE: THIS NEEDS TO STAY BEOFRE THE SPLIT OF THE REFERENCES AND KEYWORDS
+
+data.location <- data %>%
+  #looking at the keywords in the title, giving a true if the keywords are there and a false there are no keywords
+  mutate(
+    title.ev = case_when(
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", title, ignore.case = TRUE)) ~ TRUE,
+    TRUE ~ FALSE
+    )
+  ) %>%
+  #looking at the keywords in the abstract
+  mutate(
+    abstract.ev = case_when(
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", abstract, ignore.case = TRUE)) ~ TRUE,
+    TRUE ~ FALSE
+    )
+  ) %>%
+  mutate(
+    #looking at the author keywords
+    index.keywords.ev = case_when(
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", index.keywords, ignore.case = TRUE)) ~ TRUE,
+    TRUE ~ FALSE
+    )
+  ) %>%
+  mutate(
+    #looking at the author keywords
+    author.keywords.ev = case_when(
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", author.keywords, ignore.case = TRUE)) ~ TRUE,
+    TRUE ~ FALSE
+    )
+  ) %>%
+  mutate(
+    #looking at both of the keywords in to one category
+    keywords.all.ev = case_when(
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", index.keywords, ignore.case = TRUE)) ~ TRUE,
+    (grepl("ecological validity|ecologically valid|ecologically-valid|ecological validities", author.keywords, ignore.case = TRUE)) ~ TRUE,
+    TRUE ~ FALSE
+    )
+  )
+
+```
+
+
+```{r}
+#checking over articles that didn't have the keywords in the title, keywords or abstract
+
+data.location.none <- data.location %>%
+  filter(title.ev == FALSE) %>%
+  filter(abstract.ev == FALSE) %>%
+  filter(keywords.all.ev == FALSE)
+
+write_csv(data.location.none, "data.location.none.csv")
+
+#run with just keywords:ecological validity|ecologically valid
+  #id: 63, says "ecologically-valid" in the abstract
+  #id 137, says "ecological validities" in the abstract
+
+#run with keywords: ecological validity|ecologically valid|ecologically-valid|ecological validities
+
+#ids: 1025, 1332, 1342 & 1980 were corrected by hand after exporting the csv file to look over personally (all had keywords in the abstract)
+  #id: 1025, uses [" ecological" validity]
+  #id: 1332 & 1342, uses [(ecological) validity]
+  #id 1980, usues [ecological-validity]
+
+
+#loading the csv file that was corrected by hand
+data.location.none.corrected <- read.csv("data.location.none.csv")
+
+#filtering out the un-corrected ones from the original database
+data.location <- data.location %>%
+  filter(!(id %in% data.location.none.corrected$id)) #filtering out those articles that I corrected by hand
+
+#adding my hand corrected rows to the database
+data.location <- rbind(data.location.none.corrected, data.location)
+
+```
+
+```{}
+## that the location of the keywords have been accounted for in all of the articles in the database
+data.location.check <- data.location %>%
+  filter(title.ev == FALSE) %>%
+  filter(abstract.ev == FALSE) %>%
+  filter(keywords.all.ev == FALSE)
+```
+
+
+```{r}
 #giving each author.id, author name, affilication, index.keywords, references, and author.keywords a separate column for each piece of distinct data
 data <- cSplit(data, "author.id", sep=";")
 
@@ -336,7 +425,7 @@ index.keywords$value <- gsub('[[:punct:] ]+',' ', as.character(index.keywords$va
 ```
 
 
-```{r}
+```{}
 #making a corpus of the abstracts of the documents
 data.abstract <- data
 
@@ -352,7 +441,7 @@ print(corp_abstract)
 ```
 
 
-```{r}
+```{}
 #able to work with different subsets with the following code: 
   ## can check different analysis by year
 corp_recent <- corpus_subset(corp, Year >= 1990)
@@ -397,7 +486,7 @@ psych.articles.year <- read.csv("articles.by.year.csv", na.strings = c("", "NA")
 
 
 ```{r}
-#loading information from Scopus representative about the number of articles per particular journal that are uploaded to scopus January-February 2022
+#loading information from Scopus representative of the number of articles per particular journal that are uploaded to scopus January-February 2022
 
 scopus_journal_counts <- read.csv("scopus_journal_counts.csv", na.strings = c("", "NA"))
 
@@ -405,7 +494,7 @@ scopus_source_list <- read.csv("scopus_source_list.csv", na.strings = c("", "NA"
 ```
 
 
-```{r}
+```{}
 #locating the most cited article
 data %>%
   slice_max(cited.by, n = 1)
@@ -419,8 +508,7 @@ data %>%
 ```
 
 
-
-```{r}
+```{}
 #first pass at selecting random articles to qualitatively code
 #randomly selecting 3 articles
 sample_n(data, 3)
@@ -465,5 +553,23 @@ data.06.21 <- data %>%
 ```
 
 
+```{r}
+#preparing the dataframe for making the pie chart
+data.location <- data.location %>%
+  count(title.ev, abstract.ev, keywords.all.ev) %>%
+  mutate(per = (100*n)/2650)
+
+data.location.labels <- c("Just Keywords", "Just Abstract", "Abstract and Keywords", "Just Title", "Title and Keywords", "Title and Abstract", "Title, Abstract, and Keywords")
+
+data.location.bar <- cbind(data.location, data.location.labels)
+
+ggplot(data.location.bar, aes(x = n, y = data.location.labels)) +
+  geom_col()  +
+  labs(title= "Where EV keywords are in the dataset", x = "Number of articles", y = "Location of keywords") +
+  theme_thesis
+
+#POTENTIALLY ORDER BY SIZE
+  #https://stackoverflow.com/questions/25664007/reorder-bars-in-geom-bar-ggplot2-by-value
+```
 
 
