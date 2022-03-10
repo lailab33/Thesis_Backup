@@ -454,7 +454,7 @@ data.72.90 <- data %>%
 #making a data base of articles from 1991 to 2005 inclusive & randomly selecting one article
 data.91.05 <- data %>%
   filter(year < 2006 & year > 1990) %>%
-  sample_n(1)
+  sample_n(1) 
   #pass 1, article 6: Ecological validity of laboratory studies of videopoker gaming, 1991, Journal of Gambling Studies. 10.1007/BF01014526
 
 #making a database of articles from 2006 to 2021 inclusive & randomly selecting one article
