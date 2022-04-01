@@ -1,10 +1,11 @@
-#Title wordcloud
+#word cloud of the keyword information
 #FINISHED
 
 #loading libraries
 library(shiny)
 require(dplyr)
 library(splitstackshape)
+library(data.table)
 
 #quanteda packages
 library(Rcpp) #rcpp has to load before quanteda
@@ -16,16 +17,16 @@ library(quanteda.textmodels)
 #loading the data that is needed for the shiny app
 data <- read.csv("data.split.csv")
 
-#selecting the title sections of interest
+#keeping the keyword information
 data <- data %>%
-    dplyr::select(title, year, id)
+    select(year, id, index.keywords_01:index.keywords_90, author.keywords_01:author.keywords_19)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     fluidRow(
         column (12,
                 align = "Center", 
-                titlePanel("Wordcloud of title information"),
+                titlePanel("Wordcloud of keyword information (index & author)"),
         )),
     
     #adding blank space for aesthetics
@@ -84,38 +85,44 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     #making a reactive database that changes given the selected year
-    wc.title.dfm <- reactive({
+    wc.keyword.dfm <- reactive({
         #selecting the rows according to the years of interest
         data %>% 
             filter(year >= input$year_start & year <= input$year_end) %>%
             select(-year)
         
-        #loading just the titles as part of the main corpus
-        title.corpus <- corpus(data, text_field = "title")
+        #make a column of keyword per row
+        data <-  melt(data, id.vars=c("id"), na.rm = TRUE)
         
-        #removing punctuation from the title
+        #selecting where the variable came from (index.keywords_01 or _02 ect)
+        data %>% select(-variable)
+        
+        #loading just the keywords as part of the main corpus
+        keyword.corpus <- corpus(data, text_field = "value")
+        
+        #removing punctuation from the keywords
         #removing "stopwords" (common grammatical words in the english language, 
         #which are here; https://github.com/koheiw/marimo/blob/master/yaml/stopwords_en.yml )
-        wc.title <- tokens(title.corpus, remove_punct = TRUE) %>%
+        wc.keyword <- tokens(keyword.corpus, remove_punct = TRUE) %>%
             tokens_remove(pattern = stopwords("en"))
         
         #creating a document-feature matrix (DFM) from the tokens object
-        wc.title.dfm <- dfm(wc.title)
+        wc.keyword.dfm <- dfm(wc.keyword)
         
         #setting up the minimum frequency requirement
-        dfm_trim(wc.title.dfm, min_termfreq = input$num.repetitions)
+        dfm_trim(wc.keyword.dfm, min_termfreq = input$num.repetitions)
     })
     
     #making a wordcloud with quanteda
     output$wordcloud <- renderPlot({
         set.seed(132)
-        quanteda.textplots::textplot_wordcloud(wc.title.dfm(), max_words = input$num.words, 
+        quanteda.textplots::textplot_wordcloud(wc.keyword.dfm(), max_words = input$num.words, 
                                                color = c("#515E63", "#5B7DB1", "#57837B", "#32502E"))
     })
     
     #making the table of frequency numbers
     output$frequency.table <- DT::renderDataTable(
-        quanteda.textstats::textstat_frequency(wc.title.dfm())
+        quanteda.textstats::textstat_frequency(wc.keyword.dfm())
     )
 }
 
