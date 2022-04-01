@@ -1,63 +1,9 @@
 ---
 title: "Thesis Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
-
-```{}
-THINGS THAT DON'T REALLY WORK ANYMORE AND I'LL PROBABLY END UP DELETING, BUT SHOULD STICK AROUND FOR NOW
-#loading the csv files and then joining them in to one data base
-  ##converting blanks in to NA
-
-#american journal of psychology
-ajp_01 <- read.csv("ajp_01.csv", na.strings = c("", "NA"))
-ajp_02 <- read.csv("ajp_02.csv", na.strings = c("", "NA"))
-
-#psychological bulletin
-pb_01 <- read.csv("pb_01.csv", na.strings = c("", "NA"))
-pb_02 <- read.csv("pb_02.csv", na.strings = c("", "NA"))
-pb_03 <- read.csv("pb_03.csv", na.strings = c("", "NA"))
-pb_04 <- read.csv("pb_04.csv", na.strings = c("", "NA"))
-
-#perspectives on psychological science
-pps_01 <- read.csv("pps_01.csv", na.strings = c("", "NA"))
-
-#psychological review
-pr_01 <- read.csv("pr_01.csv", na.strings = c("", "NA"))
-pr_02 <- read.csv("pr_02.csv", na.strings = c("", "NA"))
-pr_03 <- read.csv("pr_03.csv", na.strings = c("", "NA"))
-
-#loading the packages all together
-data.loaded <- rbind(ajp_01, ajp_02,
-                       pb_01, pb_02, pb_03, pb_04,
-                       pps_01,
-                       pr_01, pr_02, pr_03)
-
-#creating a .csv file from table with all of the databases bound together to keep environment clean through the project
-write_csv(data.loaded, "data.loaded.csv")
-
----
-data.title <- data %>%
-  filter(grepl("ecological validity|ecologically valid", title, ignore.case = TRUE))
-
-data.abstract <- data %>%
-  filter(grepl("ecological validity|ecologically valid", abstract, ignore.case = TRUE))
-
-data.author.keywords <- data %>%
-  filter(grepl("Necological validity|ecologically valid", author.keywords, ignore.case = TRUE))
-
-data.index.keywords <- data %>%
-  filter(grepl("ecological validity|ecologically valid", index.keywords, ignore.case = TRUE))
-  
----
-#BINDING WITH THE EXTRA COLUMNS
-#putting all of the categories back together 
-data.ev <- do.call("rbind", list(data.title, data.abstract, data.author.keywords, data.index.keywords))
-
-#deleting any articles that might have replicated
-data.ev <- data.ev %>%
-  distinct(id, .keep_all = TRUE)
----
-```
 
 libraries
   load once per session
@@ -90,8 +36,8 @@ library(spacyr)
 library(newsmap)
 ```
 
-Loading together
-```{}
+Strigning the different databases into one
+```{r}
 #loading the csv files and then joining them in to one data base
   ##converting blanks in to NA
 
@@ -111,8 +57,8 @@ data.loaded <- rbind(ev_1, ev_2, ev_3)
 write_csv(data.loaded, "data.loaded.csv")
 ```
 
-Cleaning and separating
-```{}
+Cleaning the data
+```{r}
 #loading the csv file with all the databases in to a data frame
 data.original <- read.csv("data.loaded.csv")
 
@@ -186,29 +132,20 @@ data <- data %>%
 
 ```
 
-Writind data csv file
-```{}
+Writing data csv file to save time during loading
+```{r}
 #writing a csv file of data to use in the shiny apps
 write_csv(data, "data.csv")
 ```
 
+Loading the csv file so pervious process does not have to be redone
 ```{r}
 #loading the data back in to this workplace so the data doesn't have to run every time
 data <- read.csv("data.csv")
 ```
 
-```{r}
- filtered.data <- data %>%
-            group_by(source.title, year) %>%
-            count()
-
-ggplot(filtered.data, aes(x=year, y=source.title, color=source.title)) +
-  geom_line()
-```
-ggplot(by_year, aes(x=year, y=medianGdpPerCap))+ geom_line()+ expand_limits(y=0)
 
 ```{r} 
-#STARTED GETTING AN ERROR HERE ONCE I SPLIT THE DATA, SO I MOVED IT UP
 #obtaining the articles that are represented in the database
   #total of 719 journals represented
 journals <- unique(data[c("source.title")])
@@ -229,8 +166,6 @@ write_csv(journal.first.instance, "journals_by_year.csv")
 
 ```{r}
 #seeing where the keywords of ecological validity are found for each article
-
-  #SELF NOTE: THIS NEEDS TO STAY BEOFRE THE SPLIT OF THE REFERENCES AND KEYWORDS
 
 data.location <- data %>%
   #looking at the keywords in the title, giving a true if the keywords are there and a false there are no keywords
@@ -281,7 +216,7 @@ data.location.none <- data.location %>%
   filter(abstract.ev == FALSE) %>%
   filter(keywords.all.ev == FALSE)
 
-write_csv(data.location.none, "data.location.none.csv")
+#write_csv(data.location.none, "data.location.none.csv")
 
 #run with just keywords:ecological validity|ecologically valid
   #id: 63, says "ecologically-valid" in the abstract
@@ -289,11 +224,10 @@ write_csv(data.location.none, "data.location.none.csv")
 
 #run with keywords: ecological validity|ecologically valid|ecologically-valid|ecological validities
 
-#ids: 1025, 1332, 1342 & 1980 were corrected by hand after exporting the csv file to look over personally (all had keywords in the abstract)
+#ids: 1025, 1332, 1342 & 1980 were corrected by hand after exporting the csv file to look over personally (all had keywords in the abstract and I corrected by hand before loading again)
   #id: 1025, uses [" ecological" validity]
   #id: 1332 & 1342, uses [(ecological) validity]
-  #id 1980, usues [ecological-validity]
-
+  #id 1980, uses (ecological) validity
 
 #loading the csv file that was corrected by hand
 data.location.none.corrected <- read.csv("data.location.none.csv")
@@ -313,6 +247,8 @@ data.location.check <- data.location %>%
   filter(title.ev == FALSE) %>%
   filter(abstract.ev == FALSE) %>%
   filter(keywords.all.ev == FALSE)
+
+data <- data.location
 ```
 
 
@@ -330,13 +266,18 @@ data <- cSplit(data, "references", sep=";")
 
 data <- cSplit(data, "author.keywords", sep=";")
 
+#writing a csv document for the shiny apps
 write_csv(data, "data.split.csv")
 ```
 
 
 ```{r}
 #creating an aesthetic for the visualizations
-theme_thesis <- theme_classic()
+theme_thesis <- theme_bw() +
+  theme(
+  axis.text = element_text(family = "Calibri"),
+  axis.title = element_text(face = "bold", family = "Calibri")
+  )
 ```
 
 
@@ -344,13 +285,13 @@ theme_thesis <- theme_classic()
 #making a graph of what year journals began to publish about ecological validity
 
 #counting number of journals with articles first published by year
-journal.first.instance <- journal.first.instance %>%
+journal.first.instance.graph <- journal.first.instance %>%
   ungroup() %>%
   select(year) %>%
   count(year)
 
-  ggplot(journal.first.instance) +
-  geom_line(aes(x=year, y=n)) +  
+  ggplot(journal.first.instance.graph) +
+  geom_line(aes(x=year, y=n), color = "#57837B") +  
     scale_x_continuous(breaks = c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
     labs(title= "First year journals published articles about Ecological Validity", x = "Number of journals", y = "Year first EV article was published") +
     theme_thesis
@@ -367,7 +308,7 @@ data.by.year <- data %>%
 
 #creating the graph of the counts per year
 ggplot(data.by.year) +
-  geom_line(aes(x=year, y=n)) +
+  geom_line(aes(x=year, y=n), color = "#57837B") +
   scale_x_continuous(breaks = c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250)) +
   labs(title= "Number of articles about EV per year in all journals", x = "Year", y = "Number of journals") +
@@ -380,7 +321,7 @@ ggplot(data.by.year) +
   ##277 rows were removed by R for "containign non-finite values"
   ## bin width of 30
 ggplot(data, aes(x=cited.by)) +
-  geom_histogram() +
+  geom_histogram(fill = "#57837B") +
   labs(title= "Histogram of the number of citations recieved by EV items", x = "Number of citations", y = "Number of articles") +
   theme_thesis
 ```
@@ -401,30 +342,32 @@ data.abstract.both <- rbind(data.no.abstract, data.yes.abstract)
 
 #stacked bar graph of whether different kinds of items have abstracts listed or not
 ggplot(data.abstract.both, aes(x=document.type, fill=has.abstract)) +
-  geom_bar()+
+  geom_bar() +
   labs(title= "Distribution of document types about EV and wether they have abstracts", x = "Kinds of documents", y = "Number of documents") +
   guides(fill = guide_legend(title = "Has Abstract")) +
+  scale_fill_manual(values = c("#ECE7B4", "#32502E")) +
   theme_thesis +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ```{r}
 #pie graph of whether the items have abstracts or not
-data.abstract.both <- data.abstract.both %>%
+data.abstract.both.pie <- data.abstract.both %>%
   count(has.abstract) %>%
   mutate(per = (100*n)/2650)
 
 #rounding the percentage
-data.abstract.both$per <- round(data.abstract.both$per)
+data.abstract.both.pie$per <- round(data.abstract.both.pie$per)
 
 #making the graph
-ggplot(data.abstract.both, aes(x="", y = per, fill = has.abstract)) +
+ggplot(data.abstract.both.pie, aes(x="", y = per, fill = has.abstract)) +
   geom_bar(stat="identity", width=1) +
   coord_polar("y", start=0) + 
   theme_void()+
   geom_text(aes(label = paste0(per,"%")), position = position_stack(vjust=0.5)) +
     guides(fill = guide_legend(title = "Has Abstract")) +
-  labs(title = "Percentages of items with or without abstracts")
+  labs(title = "Percentages of items with or without abstracts") +
+  scale_fill_manual(values = c("#F1ECC3", "#57837B"))
 
 ```
 
@@ -451,7 +394,8 @@ wc.title.dfm <- dfm(wc.title)
 #creating a word cloud of 100 words from the dfm
   #setting the seed for reproducibility
 set.seed(132)
-quanteda.textplots::textplot_wordcloud(wc.title.dfm, max_words = 200)
+quanteda.textplots::textplot_wordcloud(wc.title.dfm, max_words = 200,
+                                       color = c("#515E63", "#5B7DB1", "#57837B", "#32502E"))
 
 #dataframe of the most used words in the titles w/ number of times used
 title_freq <- quanteda.textstats::textstat_frequency(wc.title.dfm)
@@ -480,7 +424,8 @@ wc.abstract.dfm <- dfm(wc.abstract)
 #creating a word cloud of 100 words from the dfm
   #setting the seed for reproducibility
 set.seed(132)
-quanteda.textplots::textplot_wordcloud(wc.abstract.dfm, max_words = 200)
+quanteda.textplots::textplot_wordcloud(wc.abstract.dfm, max_words = 200,
+                                       color = c("#515E63", "#5B7DB1", "#57837B", "#32502E"))
 
 #creating a list of the most used words w/number of times used
 abstract_freq <- quanteda.textstats::textstat_frequency(wc.abstract.dfm)
@@ -510,7 +455,8 @@ wc.all.keywords.dfm <- dfm(wc.all.keywords)
 #creating a word cloud of 100 words from the dfm
   #setting the seed for reproducibility
 set.seed(132)
-quanteda.textplots::textplot_wordcloud(wc.all.keywords.dfm, max_words = 200)
+quanteda.textplots::textplot_wordcloud(wc.all.keywords.dfm, max_words = 200,
+                                       color = c("#515E63", "#5B7DB1", "#57837B", "#32502E"))
 
 #creating a list of the most used words w/number of times used
 all.keywords.dfm <- quanteda.textstats::textstat_frequency(wc.all.keywords.dfm)
@@ -553,12 +499,11 @@ scopus.psych <- data.frame(year = c(1900,	1901,	1902,	1903,	1904,	1905,	1906,	19
 
 ```{r}
 #graph of the number of articles indexed by Scopus as calculated from Thelwall (2022)
-
 scopus.psych <- scopus.psych %>%
   filter(year > 1969)
 
 ggplot(scopus.psych) +
-  geom_line(aes(x=year, y=articles)) +
+  geom_line(aes(x=year, y=articles), color = "#57837B") +
   scale_x_continuous(breaks = c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
   #scale_y_continuous(breaks = c(0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250)) +
   labs(title= "Number of psyschology articles indexed by Scopus (Thelwall 2022)", x = "Year", y = "Number of articles") +
@@ -566,6 +511,49 @@ ggplot(scopus.psych) +
 
 
 ```
+```{r}
+#Creating percentage of what number of articles of Scopus indexing systems are about ecological validity
+
+#removing year 1970 and 1971 from the scopus database
+scopus.psych.n <- scopus.psych %>%
+  filter(year != 1970) %>%
+  filter(year != 1971)
+
+#removing year 2021 from ev database (scopus doesn't have it)) + adding year 1974, which doesn't exist in the ev database (aka there are no ev articles in 1974)
+#creating the row with information 
+data.by.year.new.row <- data.frame(year = c(1974), n =c(0))
+
+#binding new row to updated databse
+data.by.year.updated <- rbind(data.by.year, data.by.year.new.row)
+
+#removing the 2021 year and arranging from lowest year to highest
+data.by.year.scopus <- data.by.year.updated %>%
+  filter(year != 2021) %>%
+  arrange(year) %>%
+  select(-year)
+
+#renaming thelwall scopus information to bind
+names(scopus.psych.n) <- c("year", "total.n")
+
+#binding the information by year about ev articles and thelwall's information on total psych articles by year
+data.year.scopus.psych <- cbind(scopus.psych.n, data.by.year.scopus)
+
+#creating the percentage information
+data.year.scopus.psych <- data.year.scopus.psych %>%
+  mutate(per = ((n*100)/total.n))
+
+```
+
+```{r}
+#line graph of what percentage of information are about ev
+ggplot(data.year.scopus.psych, aes(x= year, y= per)) +
+  geom_line(color = "#57837B") +
+  geom_point(color = "#57837B") +
+  labs(title= "Percentage of articles indexed in Scopus that are about EV 
+       (as per Thelwall et. all's 2021 data)") +
+  theme_thesis
+```
+
 
 ```{r}
 #loading the csv file on number of articles about number of articles scopus has indexed for each year
@@ -574,16 +562,356 @@ psych.articles.year <- read.csv("articles.by.year.csv", na.strings = c("", "NA")
 
 #making a graph of number of journals indexed by Scopus under the category of psychology
   ggplot(psych.articles.year, aes(x = year, y = article.count)) +
-  geom_line() +  
+  geom_line(color = "#57837B") +  
     scale_x_continuous(breaks = c(1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
     labs(title= "Number of journals indexed by Scopus under the category of psychology 
          (Barcenas Meade, Scopus Feb 2022)", x = "Year", y = "Number of journals") +
     theme_thesis
 
 ```
+```{r}
+#making percentage graph with personally gathered data
+
+#filtering to match the years I have EV data for
+psych.articles.year.per <- psych.articles.year %>%
+  filter(year >= 1972) %>%
+  arrange(year)
+
+#arrange from smallest to largest year (data of ev by year)
+data.by.year.updated <- data.by.year.updated %>%
+  arrange(year) %>%
+  select(-year)
+
+#renaming columns for distinguishing ease when bound together
+names(psych.articles.year.per) <- c("year", "total.n")
+
+#binding by year items of EV and 
+data.meade.psych <- cbind(psych.articles.year.per, data.by.year.updated)
+
+#creating the percentage information
+#creating the percentage information
+data.meade.psych.per <- data.meade.psych %>%
+  mutate(per = ((n*100)/total.n))
+```
+
+```{r}
+#line graph of what percentage of information are about ev from meade.data
+
+ggplot(data.meade.psych.per, aes(x= year, y= per)) +
+  geom_line(color = "#57837B") +
+  geom_point(color = "#57837B") +
+  labs(title= "Percentage of articles indexed in Scopus that are about EV 
+       (as per personal data, Feb 2022)") +
+  theme_thesis
+```
 
 
 ```{r}
+#loading information from Scopus representative of the number of articles per particular journal that are uploaded to scopus January-February 2022
+
+scopus.journal.counts <- read.csv("scopus_journal_counts.csv", na.strings = c("", "NA"))
+
+scopus.source.list <- read.csv("scopus_source_list.csv", na.strings = c("", "NA"))
+
+#cleaning up the dataframe
+names(scopus.journal.counts) <- c("journal_title", 1942,	1943,	1944,	1945,	1946,	1947,	1948,	1949,	1950,	1951,	1952,	1953,	1954,	1955,	1956,	1957,	1958,	1959,	1960,	1961,	1962,	1963,	1964,	1965,	1966,	1967,	1968,	1969,	1970,	1971,	1972,	1973,	1974,	1975,	1976,	1977,	1978,	1979,	1980,	1981,	1982,	1983,	1984,	1985,	1986,	1987,	1988,	1989,	1990,	1991,	1992,	1993,	1994,	1995,	1996,	1997,	1998,	1999,	2000,	2001,	2002,	2003,	2004,	2005,	2006,	2007,	2008,	2009,	2010,	2011,	2012,	2013,	2014,	2015,	2016,	2017,	2018,	2019,	2020, 2021, "total.by.journal")
+  
+```
+
+```{r}
+#making a graph of the information from the scopus rep: need to convert data to long and select only the total of the years
+
+#filtering the data to just have the grand total of the information
+scopus.total.counts <- scopus.journal.counts  %>%
+  select(-total.by.journal) %>%
+  filter(journal_title == "Grand Total") %>%
+  select(-journal_title)
+
+#converting from wide to long
+grand.total.scopus <- as.data.frame(t(scopus.total.counts))
+
+#making the rowname (year) a column
+grand.total.scopus <- tibble::rownames_to_column(grand.total.scopus, "year")
+
+#renaming the columns for easier management
+names(grand.total.scopus) <- c("year", "total.articles")
+  
+```
+
+```{r}
+#making a graph of the information from the scopus representative
+#loading the csv file on number of articles about number of articles scopus has indexed for each year
+  #this information is from ME as seen by a scopus search in Feb 2022
+
+#making a graph of number of journals indexed by Scopus under the category of psychology
+
+ggplot(grand.total.scopus, aes(x=year, y=total.articles, group = 1)) +
+  geom_line(color = "#57837B") +
+  scale_x_discrete(breaks = c(1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
+  #scale_y_discrete(breaks = c(1000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000)) +
+  labs(title= "Number of psyschology articles indexed by Scopus (Scopus Rep, Jan-Feb 2022)", x = "Year", y = "Number of articles") +
+  theme_thesis +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  
+```
+
+```{r}
+#making percentage graph with personally gathered data
+
+#filtering to match the years I have EV data for
+grand.total.scopus.per <- grand.total.scopus %>%
+  filter(year >= 1972) %>%
+  arrange(year)
+
+#renaming columns for distinguishing ease when bound together
+names(grand.total.scopus.per) <- c("year", "total.n")
+
+#binding by year items of EV and 
+data.scopus.rep <- cbind(grand.total.scopus.per, data.by.year.updated)
+
+#creating the percentage information
+#creating the percentage information
+data.scopus.rep.per <- data.scopus.rep %>%
+  mutate(per = ((n*100)/total.n))
+```
+
+```{r}
+#line graph of what percentage of information are about ev from scopus representative data
+ggplot(data.scopus.rep.per, aes(x=year, y=per, group = 1)) +
+  geom_line(color = "#57837B") +
+  geom_point(color = "#57837B") +
+  labs(title= "Percentage of articles indexed in Scopus that are about EV 
+       (Scopus Representative, Jan-Feb 2022)", x = "Year", y = "Percentage of items about EV") +
+  scale_x_discrete(breaks = c(1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
+  theme_thesis
+
+```
+
+
+```{r}
+#preparing the dataframe for making the pie chart
+data.location.per <- data.location %>%
+  count(title.ev, abstract.ev, keywords.all.ev) %>%
+  mutate(per = (100*n)/2650)
+
+data.location.labels <- c("None", "Just Keywords", "Just Abstract", "Abstract and Keywords", "Just Title", "Title and Keywords", "Title and Abstract", "Title, Abstract, and Keywords")
+
+data.location.bar <- cbind(data.location.per, data.location.labels)
+
+ggplot(data.location.bar, aes(x = reorder(data.location.labels, n), y = n)) +
+  geom_col(fill = "#57837B")  +
+  labs(title= "Where EV keywords are in the dataset", x = "Number of articles", y = "Location of keywords") +
+  #scale_fill_manual(values = c("#ECE7B4")) +
+  theme_thesis +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+#making a graph of what the proportions are of having abstract/not having abstract in the data by year
+ggplot(data.abstract.both, aes(x=year, fill=has.abstract)) +
+  geom_bar() +
+  labs(title= "Distribution of document types about EV and wether they have abstracts by year", x = "Year", y = "Number of documents") +
+  guides(fill = guide_legend(title = "Has Abstract")) +
+  scale_fill_manual(values = c("#ECE7B4", "#32502E")) +
+  theme_thesis +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+```{r}
+#making a graph of what the proportions are of having abstract/not having abstract in the data by year
+data.abstract.limit <- data.abstract.both %>% 
+  filter(year < 2000)
+
+ggplot(data.abstract.limit, aes(x=year, fill=has.abstract)) +
+  geom_bar() +
+  labs(title= "Distribution of document types about EV and wether they have abstracts by year (1972-2000)", x = "Year", y = "Number of documents") +
+  guides(fill = guide_legend(title = "Has Abstract")) +
+  theme_thesis +
+  scale_fill_manual(values = c("#ECE7B4", "#32502E")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+#check w/Thelwall about his information of citation data
+thelwall.all.abstracts <- read.csv("thelwall.all.abstracts.csv")
+
+#renaming the colummns for ease of work
+names(thelwall.all.abstracts) <- c("year", "all.articles.left", "all.articles.left.duplicates", "500.abstracts.left", "all.articles.right", "all.articles.right.duplicates", "500.abstracts", "1000.abstracts", "2000.abstracts", "500.abstracts.per", "1000.abstracts.per", "2000.abstracts.per")
+
+
+```
+
+
+```{r}
+#making a line graph of the percentages of articles in all of scopus that contain abstracts with different numbers of characters
+thelwall.all.abstracts.graph <- thelwall.all.abstracts %>%
+  select(year, "500.abstracts.per", "1000.abstracts.per", "2000.abstracts.per")
+
+names(thelwall.all.abstracts.graph) <- c("year",  "fiveh.abstracts.per", "tenh.abstracts.per", "twentyh.abstracts.per")
+
+#removing na rows
+na.omit(thelwall.all.abstracts.graph) 
+
+#removing the % sign from the rows in the dataframe + converting to numeric values
+#500 column
+thelwall.all.abstracts.graph$fiveh.abstracts.per = as.numeric(gsub("\\%", "", thelwall.all.abstracts.graph$fiveh.abstracts.per))
+as.numeric(thelwall.all.abstracts.graph$fiveh.abstracts.per)
+
+#1000 column
+thelwall.all.abstracts.graph$tenh.abstracts.per = as.numeric(gsub("\\%", "", thelwall.all.abstracts.graph$tenh.abstracts.per))
+as.numeric(thelwall.all.abstracts.graph$tenh.abstracts.per)
+
+#2000 column
+thelwall.all.abstracts.graph$twentyh.abstracts.per = as.numeric(gsub("\\%", "", thelwall.all.abstracts.graph$twentyh.abstracts.per))
+as.numeric(thelwall.all.abstracts.graph$twentyh.abstracts.per)
+
+#line graph
+ggplot(thelwall.all.abstracts.graph, aes(x = year)) +
+  geom_line(aes(y = fiveh.abstracts.per, color = "500 characters")) + 
+ geom_line(aes(y = tenh.abstracts.per, color = "1000 characters")) +
+  geom_line(aes(y = twentyh.abstracts.per, color = "2000 characters")) + 
+  scale_color_manual('Number of characters in abstract', values=c('#F1ECC3', '#C9D8B6', "#57837B")) +
+  labs(title= "Number of items with abstracts of different character lengths indexed in Scopus 1900-2020 (Thelwall et al. 2021)", x = "Year", y = "Percentage of articles with abstracts") +
+  xlim(1900, 2020) +
+  ylim(0,100) +
+  theme_thesis
+
+```
+
+
+```{r}
+thelwall.limit.abstracts <- thelwall.all.abstracts.graph %>%
+  filter(year > 1941, year < 2000)
+
+ggplot(thelwall.limit.abstracts, aes(x = year)) +
+  geom_line(aes(y = fiveh.abstracts.per, color = "500 characters")) + 
+ geom_line(aes(y = tenh.abstracts.per, color = "1000 characters")) +
+  geom_line(aes(y = twentyh.abstracts.per, color = "2000 characters")) + 
+  scale_color_manual('Number of characters in abstract', values=c('#F1ECC3', '#C9D8B6', "#57837B")) +
+  labs(title= "Number of items with abstracts of different character lengths indexed in Scopus 1940-2020 (Thelwall et al. 2021)", x = "Year", y = "Percentage of articles with abstracts") +
+  xlim(1940, 2001) +
+  ylim(0,100) +
+  theme_thesis
+```
+
+```{r}
+#counting number of articles that have abstracts per year
+data.abstract.both.per <- data.abstract.both %>%
+  select(id, year, has.abstract) %>%
+  group_by(year) %>%
+  count(has.abstract) %>%
+  ungroup() %>%
+  filter(has.abstract == "Yes") %>%
+  select(-has.abstract)
+  
+#renaming columns
+names(data.abstract.both.per) <- c("year", "number.has.abstract")
+
+#deselecting the year in the database that counts total number of articles by year
+data.by.year.only <- data.by.year %>%
+  select(-year)
+
+#binding the columns of total number of articles by year and articles that have abstracts or not
+data.abstract.per <- bind_cols(data.by.year.only, data.abstract.both.per)
+
+#renaming the columns to be more indicative of their representation
+names(data.abstract.per) <- c("total.articles","year", "number.has.abstract")
+
+#creating the percentage of articles w/ abstracts from the ev data
+data.abstract.per <- data.abstract.per %>%
+  mutate(per.abstract = (number.has.abstract * 100)/total.articles) %>%
+  select(-total.articles, -number.has.abstract)
+
+#renaming the columns in all the dataframes so that they match each other
+names(data.abstract.per) <- c("x", "y")
+
+#separating out the different columns that need to be represented to add them to the line graph together later
+  ## & renaming the columns so they all match each other
+#500 character abstract
+data.abstract.per.500 <-thelwall.all.abstracts.graph %>%
+  select(year, fiveh.abstracts.per) %>%
+  filter(year > 1971, year < 2022)
+
+names(data.abstract.per.500) <- c("x", "y")
+
+#2000 character abstract
+data.abstract.per.2000 <- thelwall.all.abstracts.graph %>%
+  select(year, twentyh.abstracts.per) %>%
+  filter(year > 1971, year < 2022)
+
+names(data.abstract.per.2000) <- c("x", "y")
+
+#1000 character abstract
+data.abstract.per.1000 <- thelwall.all.abstracts.graph %>%
+  select(year,tenh.abstracts.per)%>%
+  filter(year > 1971, year < 2022)
+
+names(data.abstract.per.1000) <- c("x", "y")
+
+
+#creating a line graph
+ggplot(NULL, aes(x,y)) +
+  geom_line(data = data.abstract.per, aes(col = "Ecological Validity Items")) + 
+  geom_line(data = data.abstract.per.500, aes(col = "All Scopus Items, 500 characters")) + 
+  geom_line(data = data.abstract.per.1000, aes(col = "All Scopus Items, 1000 characters")) +
+  geom_line(data = data.abstract.per.2000, aes(col = "All Scopus Items, 2000 characters")) + 
+  scale_color_manual('Number of characters in abstract', values=c("#F1ECC3", '#C9D8B6', '#57837B', "#515E63")) +
+  labs(title= "Percentage of items with abstracts", x = "Year", y = "Percentage of articles with abstracts") +
+  ylim(0,100) +
+  theme_thesis
+```
+
+```{r}
+#making a database of reference information associated to the years
+
+#selecting the year information and the reference information
+data.reference <- data %>%
+  select(year, id, references_001:references_574)
+
+#associating 1 reference to each year from every article in the database
+data.reference <- melt(data.reference, id.vars=c("year", "id"), na.rm = TRUE)%>%
+  select(-variable)
+
+#making the data lowercase
+data.reference$value = tolower(data.reference$value)
+
+#removing the punctuation
+data.reference$value <- gsub('[[:punct:] ]+',' ', as.character(data.reference$value))
+
+```
+
+```{r}
+#filtering the reference information to see which articles are citing brunswick
+data.bruns <- data.reference %>%
+  filter(grepl("brunswik", value, ignore.case = TRUE))
+
+data.bruns %>%
+  count(id) #80 unique articles
+
+#databse where there is one instance per citation
+data.bruns.single <- data.bruns %>%
+  group_by(id) %>%
+  slice_head() %>%
+  ungroup() %>%
+  select(-id) %>%
+  count(year)
+
+#making a scatter plot of articles that cited brunswik by year
+ggplot(data.bruns.single, aes(x=year, y=n)) + 
+  geom_point(color = "#57837B") +
+  labs(title= "Articles citing 'brunswik' by year", x = "Year", y = "Number of articles") +
+  xlim(1970,2022) +
+  ylim(0, 10) +
+  scale_y_continuous(breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)) +
+  theme_thesis
+```
+
+```{}
 #locating the most cited article
 data %>%
   slice_max(cited.by, n = 1)
@@ -641,106 +969,41 @@ data.06.21 <- data %>%
   #pass 1, article 7: Predicting advertising effectiveness by facial expressions in response to amusing persuasive stimuli, 2014, Journal of Neuroscience, Psychology, and Economics. 10.1037/npe0000012
 ```
 
+```{}
+#second pass at selecting random articles to qualitatively code
 
-```{r}
-#preparing the dataframe for making the pie chart
-data.location.per <- data.location %>%
-  count(title.ev, abstract.ev, keywords.all.ev) %>%
-  mutate(per = (100*n)/2650)
+#randomly selecting 3 articles
+set.seed(132)
+sample_n(data, 3)
+  #pass 2, article 1: 10.1016/j.concog.2010.03.011
+  #pass 2, article 2: 10.1017/S0954579421000791
+  #pass 2, article 3: 10.3389/fpsyg.2021.684012
 
-data.location.labels <- c("None", "Just Keywords", "Just Abstract", "Abstract and Keywords", "Just Title", "Title and Keywords", "Title and Abstract", "Title, Abstract, and Keywords")
+#selecting one random article in the top 25% citation range
+set.seed(132)
+sample_n(data.top.75per,1)
+  #pass 2, article 4: 	10.1037/0012-1649.23.1.49
 
-data.location.bar <- cbind(data.location.per, data.location.labels)
+#selecting an article from 1972-1990
+set.seed(132)
+data.72.90 %>%
+  sample_n(1)
+  #pass 2: article 5: 10.1177/0261927X8300200102
 
-ggplot(data.location.bar, aes(x = n, y = data.location.labels)) +
-  geom_col()  +
-  labs(title= "Where EV keywords are in the dataset", x = "Number of articles", y = "Location of keywords") +
-  theme_thesis
+#making a database of articles from 1991 to 2005 inclusive & randomly selecting one article
+set.seed(132)
+data.91.05 %>%
+  sample_n(1) 
+  #pass 2, article 6: 10.1037/0033-2909.112.3.411
 
-#POTENTIALLY ORDER BY SIZE
-  #https://stackoverflow.com/questions/25664007/reorder-bars-in-geom-bar-ggplot2-by-value
+#making a database of articles from 2006 to 2021 inclusive & randomly selecting one article
+set.seed(132)
+data.06.21 %>%
+  sample_n(1)
+  #pass 2, article 7: 	10.1016/j.tics.2018.10.001
 ```
 
 ```{r}
-#loading information from Scopus representative of the number of articles per particular journal that are uploaded to scopus January-February 2022
-
-scopus.journal.counts <- read.csv("scopus_journal_counts.csv", na.strings = c("", "NA"))
-
-scopus.source.list <- read.csv("scopus_source_list.csv", na.strings = c("", "NA"))
-
-#cleaning up the dataframe
-names(scopus.journal.counts) <- c("journal_title", 1942,	1943,	1944,	1945,	1946,	1947,	1948,	1949,	1950,	1951,	1952,	1953,	1954,	1955,	1956,	1957,	1958,	1959,	1960,	1961,	1962,	1963,	1964,	1965,	1966,	1967,	1968,	1969,	1970,	1971,	1972,	1973,	1974,	1975,	1976,	1977,	1978,	1979,	1980,	1981,	1982,	1983,	1984,	1985,	1986,	1987,	1988,	1989,	1990,	1991,	1992,	1993,	1994,	1995,	1996,	1997,	1998,	1999,	2000,	2001,	2002,	2003,	2004,	2005,	2006,	2007,	2008,	2009,	2010,	2011,	2012,	2013,	2014,	2015,	2016,	2017,	2018,	2019,	2020, 2021, "total.by.journal")
-  
-```
-
-```{r}
-#making a graph of the information from the scopus rep: need to convert data to long and select only the total of the years
-
-#filtering the data to just have the grand total of the information
-scopus.total.counts <- scopus.journal.counts  %>%
-  select(-total.by.journal) %>%
-  filter(journal_title == "Grand Total") %>%
-  select(-journal_title)
-
-#converting from wide to long
-grand.total.scopus <- as.data.frame(t(scopus.total.counts))
-
-#making the rowname (year) a column
-grand.total.scopus <- tibble::rownames_to_column(grand.total.scopus, "year")
-
-#renaming the columns for easier management
-names(grand.total.scopus) <- c("year", "total.articles")
-  
-```
-
-```{r}
-#making a graph of the information from the scopus representative
-#loading the csv file on number of articles about number of articles scopus has indexed for each year
-  #this information is from ME as seen by a scopus search in Feb 2022
-
-#making a graph of number of journals indexed by Scopus under the category of psychology
-
-ggplot(grand.total.scopus) +
-  geom_line(aes(x=year, y=total.articles, group = 1)) +
-  #scale_x_continuous(breaks = c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)) +
-  #scale_y_continuous(breaks = c(0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250)) +
-  labs(title= "Number of psyschology articles indexed by Scopus (Thelwall 2022)", x = "Year", y = "Number of articles") +
-  theme_thesis +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-  
-```
-
-```{r}
-#making a graph of what the proportions are of having abstract/not having abstract in the data by year
-ggplot(data.abstract.both, aes(x=year, fill=has.abstract)) +
-  geom_bar() +
-  labs(title= "Distribution of document types about EV and wether they have abstracts by year", x = "Year", y = "Number of documents") +
-  guides(fill = guide_legend(title = "Has Abstract")) +
-  theme_thesis +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-
-
-```{r}
-#making a graph of what the proportions are of having abstract/not having abstract in the data by year
-data.abstract.both %>% 
-  filter(year < 200)
-
-ggplot(data.abstract.both, aes(x=year, fill=has.abstract)) +
-  geom_bar() +
-  labs(title= "Distribution of document types about EV and wether they have abstracts by year (1972-2000)", x = "Year", y = "Number of documents") +
-  guides(fill = guide_legend(title = "Has Abstract")) +
-  theme_thesis +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-
-
-
-
-
-
-
 
