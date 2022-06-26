@@ -1,5 +1,5 @@
 # Thesis_Backup
-This is a backup for my senior captstone project at Vassar College for the completion of my cognitive science major. I track the usage of the term "Environmental Validity" in articles indexed by Scopus in an attemtpt to understand how the concerns about replication, generalization, and 
+This is a backup for my senior captstone project at Vassar College for the completion of my cognitive science major. I track the usage of the term "Environmental Validity" in articles indexed by Scopus in an attemtpt to understand how the concerns about replication, generalization, and the lab environmnet have changes since 1940.
 
 My project will be available at my college's online digital library after the summer of 2022.
 
